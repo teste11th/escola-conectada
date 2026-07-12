@@ -1,30 +1,38 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:escola_conectada/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:escola_conectada/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  Future<void> entrarNaHome(WidgetTester tester) async {
+    await tester.pumpWidget(const EscolaConectadaApp());
+    await tester.ensureVisible(find.text('Entrar'));
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+  }
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  Future<void> rolarAteAcompanharOnibus(WidgetTester tester) async {
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+  }
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('abre a Home pelo botão Entrar', (tester) async {
+    await entrarNaHome(tester);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Pedro Henrique'), findsOneWidget);
+    expect(find.text('Ônibus em rota'), findsOneWidget);
+
+    await rolarAteAcompanharOnibus(tester);
+    expect(find.text('Acompanhar ônibus'), findsOneWidget);
+  });
+
+  testWidgets('botão Acompanhar ônibus abre o mapa', (tester) async {
+    await entrarNaHome(tester);
+    await rolarAteAcompanharOnibus(tester);
+
+    await tester.tap(find.text('Acompanhar ônibus'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mapa em tempo real'), findsOneWidget);
+    expect(find.byIcon(Icons.map_rounded), findsOneWidget);
   });
 }

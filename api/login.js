@@ -1,7 +1,7 @@
 import {createSession, hashPassword, normalizeCpf, safeEqual} from './_session.js';
 
 export default async function handler(request, response) {
-  setCorsHeaders(response);
+  setCorsHeaders(request, response);
   if (request.method === 'OPTIONS') return response.status(204).end();
   if (request.method !== 'POST') return response.status(405).json({message: 'Método não permitido.'});
   if (!hasEnvironment()) return response.status(503).json({message: 'Login demonstrativo não configurado.'});
@@ -28,8 +28,14 @@ function hasEnvironment() {
     .every((name) => process.env[name]?.trim());
 }
 
-function setCorsHeaders(response) {
-  response.setHeader('Access-Control-Allow-Origin', process.env.ESCOLA_APP_ORIGIN ?? 'http://localhost');
+function setCorsHeaders(request, response) {
+  const origin = request.headers.origin;
+  const localOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin ?? '');
+  const allowedOrigin = localOrigin
+    ? origin
+    : process.env.ESCOLA_APP_ORIGIN ?? 'http://localhost';
+  response.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  response.setHeader('Vary', 'Origin');
   response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }

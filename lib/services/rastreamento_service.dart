@@ -1,4 +1,9 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import '../models/posicao_veiculo.dart';
+import 'auth_service.dart';
 
 abstract interface class RastreamentoService {
   Future<PosicaoVeiculo> buscarPosicao(String identificadorVeiculo);
@@ -24,4 +29,58 @@ class RastreamentoDemoService implements RastreamentoService {
       emRota: true,
     );
   }
+}
+
+class RastreamentoApiService implements RastreamentoService {
+  const RastreamentoApiService(this.token);
+
+  final String token;
+
+  @override
+  Future<PosicaoVeiculo> buscarPosicao(String identificadorVeiculo) async {
+    final response = await http.get(
+      Uri.parse('$escolaApiBaseUrl/api/minha-posicao'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    final json = _decode(response.body);
+    if (response.statusCode != 200) {
+      throw RastreamentoException(
+        json['message']?.toString() ?? 'Não foi possível obter a localização.',
+      );
+    }
+
+    final velocidade = (json['speedKmH'] as num?)?.toDouble() ?? 0;
+    final ignicao = json['ignition']?.toString().toUpperCase() == 'ON';
+    final placa = json['plate']?.toString() ?? 'Veículo escolar';
+
+    return PosicaoVeiculo(
+      veiculo: 'Ônibus $placa',
+      linha: 'Linha 05',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+      velocidadeKmH: velocidade,
+      atualizadoEm:
+          DateTime.tryParse(json['eventAt']?.toString() ?? '') ??
+          DateTime.now(),
+      emRota: ignicao || velocidade > 0,
+    );
+  }
+
+  Map<String, dynamic> _decode(String body) {
+    try {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } on FormatException {
+      return const <String, dynamic>{};
+    }
+  }
+}
+
+class RastreamentoException implements Exception {
+  const RastreamentoException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

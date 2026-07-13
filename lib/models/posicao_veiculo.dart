@@ -5,9 +5,9 @@ class PosicaoVeiculo {
     required this.latitude,
     required this.longitude,
     required this.velocidadeKmH,
-    required this.distanciaKm,
-    required this.minutosParaChegada,
-    required this.horarioChegada,
+    this.distanciaKm,
+    this.minutosParaChegada,
+    this.horarioChegada,
     required this.atualizadoEm,
     required this.emRota,
   });
@@ -17,9 +17,9 @@ class PosicaoVeiculo {
   final double latitude;
   final double longitude;
   final double velocidadeKmH;
-  final double distanciaKm;
-  final int minutosParaChegada;
-  final String horarioChegada;
+  final double? distanciaKm;
+  final int? minutosParaChegada;
+  final String? horarioChegada;
   final DateTime atualizadoEm;
   final bool emRota;
 }

@@ -214,7 +214,9 @@ class _ResumoRota extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${posicao.minutosParaChegada} min',
+                      posicao.minutosParaChegada == null
+                          ? '--'
+                          : '${posicao.minutosParaChegada} min',
                       style: const TextStyle(
                         color: _azul,
                         fontWeight: FontWeight.w800,
@@ -235,8 +237,9 @@ class _ResumoRota extends StatelessWidget {
               children: [
                 _Metrica(
                   icon: Icons.near_me_rounded,
-                  value:
-                      '${posicao.distanciaKm.toStringAsFixed(1).replaceAll('.', ',')} km',
+                  value: posicao.distanciaKm == null
+                      ? '--'
+                      : '${posicao.distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km',
                   label: 'Distância',
                 ),
                 _Metrica(
@@ -246,14 +249,14 @@ class _ResumoRota extends StatelessWidget {
                 ),
                 _Metrica(
                   icon: Icons.access_time_rounded,
-                  value: posicao.horarioChegada,
+                  value: posicao.horarioChegada ?? '--',
                   label: 'Chegada',
                 ),
               ],
             ),
             const SizedBox(height: 10),
             Text(
-              'Posição atualizada agora',
+              'Posição atualizada em ${_formatarHorario(posicao.atualizadoEm)}',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085)),
@@ -263,6 +266,12 @@ class _ResumoRota extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatarHorario(DateTime data) {
+  String doisDigitos(int value) => value.toString().padLeft(2, '0');
+  final local = data.toLocal();
+  return '${doisDigitos(local.hour)}:${doisDigitos(local.minute)}:${doisDigitos(local.second)}';
 }
 
 class _ErroLocalizacao extends StatelessWidget {

@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../models/posicao_veiculo.dart';
+import '../services/rastreamento_service.dart';
 import 'mapa_page.dart';
 
 const azul = Color(0xFF1565C0);
 const verde = Color(0xFF2E7D32);
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+    this.rastreamentoService = const RastreamentoDemoService(),
+    this.nomeResponsavel = 'Responsável',
+    this.nomeAluno = 'Pedro Henrique',
+  });
+
+  final RastreamentoService rastreamentoService;
+  final String nomeResponsavel;
+  final String nomeAluno;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -18,8 +29,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final telas = [
-      InicioPage(onMapa: () => setState(() => pagina = 1)),
-      const MapaPage(),
+      InicioPage(
+        onMapa: () => setState(() => pagina = 1),
+        nomeResponsavel: widget.nomeResponsavel,
+        nomeAluno: widget.nomeAluno,
+        rastreamentoService: widget.rastreamentoService,
+      ),
+      MapaPage(rastreamentoService: widget.rastreamentoService),
       const AvisosPage(),
       const PerfilPage(),
     ];
@@ -58,7 +74,16 @@ class _HomePageState extends State<HomePage> {
 
 class InicioPage extends StatelessWidget {
   final VoidCallback onMapa;
-  const InicioPage({super.key, required this.onMapa});
+  final String nomeResponsavel;
+  final String nomeAluno;
+  final RastreamentoService rastreamentoService;
+  const InicioPage({
+    super.key,
+    required this.onMapa,
+    required this.nomeResponsavel,
+    required this.nomeAluno,
+    required this.rastreamentoService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +112,9 @@ class InicioPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          const Text(
-            'Bom dia, responsável 👋',
-            style: TextStyle(fontSize: 27, fontWeight: FontWeight.w800),
+          Text(
+            'Olá, $nomeResponsavel 👋',
+            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -97,9 +122,9 @@ class InicioPage extends StatelessWidget {
             style: TextStyle(color: Color(0xFF667085), height: 1.4),
           ),
           const SizedBox(height: 22),
-          const _AlunoCard(),
+          _AlunoCard(nomeAluno: nomeAluno),
           const SizedBox(height: 14),
-          const _StatusCard(),
+          _StatusCard(rastreamentoService: rastreamentoService),
           const SizedBox(height: 14),
           SizedBox(
             height: 56,
@@ -127,8 +152,8 @@ class InicioPage extends StatelessWidget {
           const SizedBox(height: 10),
           const _AvisoCard(
             icon: Icons.info_outline,
-            title: 'Previsão de chegada',
-            subtitle: 'Chegada estimada ao ponto em aproximadamente 8 minutos.',
+            title: 'Acompanhamento em tempo real',
+            subtitle: 'Consulte o mapa para ver a última posição do ônibus.',
             color: azul,
           ),
         ],
@@ -138,7 +163,9 @@ class InicioPage extends StatelessWidget {
 }
 
 class _AlunoCard extends StatelessWidget {
-  const _AlunoCard();
+  const _AlunoCard({required this.nomeAluno});
+
+  final String nomeAluno;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +173,7 @@ class _AlunoCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          children: const [
+          children: [
             Row(
               children: [
                 CircleAvatar(
@@ -159,32 +186,36 @@ class _AlunoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pedro Henrique',
-                        style: TextStyle(
+                        nomeAluno,
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Aluno vinculado',
                         style: TextStyle(color: Color(0xFF667085)),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded),
+                const Icon(Icons.chevron_right_rounded),
               ],
             ),
-            Divider(height: 30),
-            _Info(
+            const Divider(height: 30),
+            const _Info(
               icon: Icons.apartment_rounded,
               label: 'Escola',
               value: 'EM João XXIII',
             ),
-            SizedBox(height: 14),
-            _Info(icon: Icons.route_rounded, label: 'Linha', value: 'Linha 05'),
-            SizedBox(height: 14),
-            _Info(
+            const SizedBox(height: 14),
+            const _Info(
+              icon: Icons.route_rounded,
+              label: 'Linha',
+              value: 'Linha 05',
+            ),
+            const SizedBox(height: 14),
+            const _Info(
               icon: Icons.directions_bus_rounded,
               label: 'Veículo',
               value: 'Ônibus 12',
@@ -227,71 +258,115 @@ class _Info extends StatelessWidget {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard();
+  const _StatusCard({required this.rastreamentoService});
+
+  final RastreamentoService rastreamentoService;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: const [
-            Row(
+    return FutureBuilder<PosicaoVeiculo>(
+      future: rastreamentoService.buscarPosicao('onibus-escolar'),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData && !snapshot.hasError) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(28),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const Card(
+            child: ListTile(
+              leading: Icon(Icons.cloud_off_rounded),
+              title: Text('Localização indisponível'),
+              subtitle: Text('Abra o mapa para tentar novamente.'),
+            ),
+          );
+        }
+
+        final posicao = snapshot.requireData;
+        final status = posicao.emRota ? 'Ônibus em movimento' : 'Ônibus parado';
+        final horario = _formatarHorario(posicao.atualizadoEm);
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
               children: [
-                CircleAvatar(
-                  backgroundColor: Color(0xFFE7F5E9),
-                  child: Icon(
-                    Icons.directions_bus_filled_rounded,
-                    color: verde,
-                  ),
-                ),
-                SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Ônibus em rota',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Color(0xFFE7F5E9),
+                      child: Icon(
+                        Icons.directions_bus_filled_rounded,
+                        color: verde,
                       ),
-                      Text(
-                        'Atualizado há poucos segundos',
-                        style: TextStyle(
-                          color: Color(0xFF667085),
-                          fontSize: 12,
-                        ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            status,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Atualizado às $horario',
+                            style: const TextStyle(
+                              color: Color(0xFF667085),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Icon(
+                      Icons.circle,
+                      color: posicao.emRota ? verde : Colors.orange,
+                      size: 12,
+                    ),
+                  ],
                 ),
-                Icon(Icons.circle, color: verde, size: 12),
+                const Divider(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _Status(
+                      icon: Icons.speed,
+                      value: '${posicao.velocidadeKmH.toStringAsFixed(0)} km/h',
+                      label: 'Velocidade',
+                    ),
+                    const _Status(
+                      icon: Icons.gps_fixed,
+                      value: 'Ativo',
+                      label: 'GPS',
+                    ),
+                    _Status(
+                      icon: Icons.access_time,
+                      value: horario,
+                      label: 'Atualização',
+                    ),
+                  ],
+                ),
               ],
             ),
-            Divider(height: 28),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _Status(icon: Icons.schedule, value: '8 min', label: 'Chegada'),
-                _Status(
-                  icon: Icons.near_me,
-                  value: '1,2 km',
-                  label: 'Distância',
-                ),
-                _Status(
-                  icon: Icons.speed,
-                  value: '38 km/h',
-                  label: 'Velocidade',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
+}
+
+String _formatarHorario(DateTime data) {
+  String doisDigitos(int value) => value.toString().padLeft(2, '0');
+  final local = data.toLocal();
+  return '${doisDigitos(local.hour)}:${doisDigitos(local.minute)}';
 }
 
 class _Status extends StatelessWidget {

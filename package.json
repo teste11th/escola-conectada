@@ -1,0 +1,11 @@
+{
+  "name": "escola-conectada-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:api": "node --test api/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

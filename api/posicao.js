@@ -25,51 +25,58 @@ export default async function handler(request, response) {
       return response.status(400).json({message: 'Informe uma placa válida.'});
     }
 
-    const token = await authenticateRapp();
-    const vehiclesPayload = await rappGet(
-      `/api/veiculos?placa=${encodeURIComponent(placa)}`,
-      token,
-    );
-    let vehicle = findVehicle(vehiclesPayload?.data, placa);
-    let accessibleVehicleCount = extractVehicles(vehiclesPayload?.data).length;
-
-    if (!vehicle) {
-      const allVehiclesPayload = await rappGet('/api/veiculos', token);
-      accessibleVehicleCount = extractVehicles(allVehiclesPayload?.data).length;
-      vehicle = findVehicle(allVehiclesPayload?.data, placa);
-    }
-
-    if (!vehicle?.id) {
-      return response.status(404).json({
-        message: `Veículo não encontrado entre ${accessibleVehicleCount} veículos acessíveis.`,
-      });
-    }
-
-    const positionPayload = await rappGet(`/api/posicoes/${vehicle.id}`, token);
-    const position = positionPayload?.data;
-
-    if (!position) {
-      return response.status(404).json({message: 'Posição não encontrada.'});
-    }
-
-    return response.status(200).json({
-      vehicleId: Number(position.id_veiculo ?? vehicle.id),
-      trackerId: Number(vehicle.id_rastreador ?? 0),
-      plate: String(position.placa ?? vehicle.placa ?? placa),
-      latitude: Number(position.latitude),
-      longitude: Number(position.longitude),
-      speedKmH: parseSpeed(position.velocidade),
-      eventAt: position.datetime_evento ?? null,
-      ignition: position.ign ?? null,
-      gpsValid: Boolean(position.gps_valido),
-      proximity: position.proximidade ?? null,
-    });
+    return response.status(200).json(await fetchPositionByPlate(placa));
   } catch (error) {
     const statusCode = Number(error.statusCode) || 500;
     return response.status(statusCode).json({
       message: statusCode === 500 ? 'Erro interno do servidor.' : error.message,
     });
   }
+}
+
+export async function fetchPositionByPlate(placa) {
+  const token = await authenticateRapp();
+  const vehiclesPayload = await rappGet(
+    `/api/veiculos?placa=${encodeURIComponent(placa)}`,
+    token,
+  );
+  let vehicle = findVehicle(vehiclesPayload?.data, placa);
+  let accessibleVehicleCount = extractVehicles(vehiclesPayload?.data).length;
+
+  if (!vehicle) {
+    const allVehiclesPayload = await rappGet('/api/veiculos', token);
+    accessibleVehicleCount = extractVehicles(allVehiclesPayload?.data).length;
+    vehicle = findVehicle(allVehiclesPayload?.data, placa);
+  }
+
+  if (!vehicle?.id) {
+    const error = new Error(
+      `Veículo não encontrado entre ${accessibleVehicleCount} veículos acessíveis.`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const positionPayload = await rappGet(`/api/posicoes/${vehicle.id}`, token);
+  const position = positionPayload?.data;
+  if (!position) {
+    const error = new Error('Posição não encontrada.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    vehicleId: Number(position.id_veiculo ?? vehicle.id),
+    trackerId: Number(vehicle.id_rastreador ?? 0),
+    plate: String(position.placa ?? vehicle.placa ?? placa),
+    latitude: Number(position.latitude),
+    longitude: Number(position.longitude),
+    speedKmH: parseSpeed(position.velocidade),
+    eventAt: position.datetime_evento ?? null,
+    ignition: position.ign ?? null,
+    gpsValid: Boolean(position.gps_valido),
+    proximity: position.proximidade ?? null,
+  };
 }
 
 export function normalizePlate(value) {

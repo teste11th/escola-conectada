@@ -31,14 +31,18 @@ export default async function handler(request, response) {
       token,
     );
     let vehicle = findVehicle(vehiclesPayload?.data, placa);
+    let accessibleVehicleCount = extractVehicles(vehiclesPayload?.data).length;
 
     if (!vehicle) {
       const allVehiclesPayload = await rappGet('/api/veiculos', token);
+      accessibleVehicleCount = extractVehicles(allVehiclesPayload?.data).length;
       vehicle = findVehicle(allVehiclesPayload?.data, placa);
     }
 
     if (!vehicle?.id) {
-      return response.status(404).json({message: 'Veículo não encontrado.'});
+      return response.status(404).json({
+        message: `Veículo não encontrado entre ${accessibleVehicleCount} veículos acessíveis.`,
+      });
     }
 
     const positionPayload = await rappGet(`/api/posicoes/${vehicle.id}`, token);

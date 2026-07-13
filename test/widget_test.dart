@@ -32,7 +32,8 @@ void main() {
     await tester.tap(find.text('Acompanhar ônibus'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Mapa em tempo real'), findsOneWidget);
-    expect(find.byIcon(Icons.map_rounded), findsOneWidget);
+    expect(find.text('Ponto do aluno'), findsOneWidget);
+    expect(find.text('EM João XXIII'), findsOneWidget);
+    expect(find.text('Ônibus 12'), findsAtLeastNWidgets(1));
   });
 }

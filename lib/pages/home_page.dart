@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'mapa_page.dart';
+
 const azul = Color(0xFF1565C0);
 const verde = Color(0xFF2E7D32);
 
@@ -214,8 +216,8 @@ class _AvisoCard extends StatelessWidget {
   }
 }
 
-class MapaPage extends StatelessWidget {
-  const MapaPage({super.key});
+class MapaLegadoPage extends StatelessWidget {
+  const MapaLegadoPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(

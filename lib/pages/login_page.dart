@@ -32,12 +32,22 @@ class _LoginPageState extends State<LoginPage> {
                       color: const Color(0xFF1565C0).withValues(alpha: .10),
                       borderRadius: BorderRadius.circular(28),
                     ),
-                    child: const Icon(Icons.directions_bus_rounded, size: 52, color: Color(0xFF1565C0)),
+                    child: const Icon(
+                      Icons.directions_bus_rounded,
+                      size: 52,
+                      color: Color(0xFF1565C0),
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Escola Conectada', style: TextStyle(fontSize: 31, fontWeight: FontWeight.w800)),
+                  const Text(
+                    'Escola Conectada',
+                    style: TextStyle(fontSize: 31, fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 6),
-                  const Text('Transporte Escolar Inteligente', style: TextStyle(color: Color(0xFF667085), fontSize: 16)),
+                  const Text(
+                    'Transporte Escolar Inteligente',
+                    style: TextStyle(color: Color(0xFF667085), fontSize: 16),
+                  ),
                   const SizedBox(height: 28),
                   Card(
                     child: Padding(
@@ -46,18 +56,34 @@ class _LoginPageState extends State<LoginPage> {
                         children: [
                           DropdownButtonFormField<String>(
                             initialValue: municipio,
-                            decoration: const InputDecoration(labelText: 'Município', prefixIcon: Icon(Icons.location_city_outlined)),
+                            decoration: const InputDecoration(
+                              labelText: 'Município',
+                              prefixIcon: Icon(Icons.location_city_outlined),
+                            ),
                             items: const [
-                              DropdownMenuItem(value: 'Campo Grande', child: Text('Campo Grande')),
-                              DropdownMenuItem(value: 'Paraíso das Águas', child: Text('Paraíso das Águas')),
-                              DropdownMenuItem(value: 'Inocência', child: Text('Inocência')),
+                              DropdownMenuItem(
+                                value: 'Campo Grande',
+                                child: Text('Campo Grande'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Paraíso das Águas',
+                                child: Text('Paraíso das Águas'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Inocência',
+                                child: Text('Inocência'),
+                              ),
                             ],
-                            onChanged: (value) => setState(() => municipio = value),
+                            onChanged: (value) =>
+                                setState(() => municipio = value),
                           ),
                           const SizedBox(height: 16),
                           const TextField(
                             keyboardType: TextInputType.number,
-                            decoration: InputDecoration(labelText: 'CPF do responsável', prefixIcon: Icon(Icons.person_outline)),
+                            decoration: InputDecoration(
+                              labelText: 'CPF do responsável',
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           TextField(
@@ -66,8 +92,14 @@ class _LoginPageState extends State<LoginPage> {
                               labelText: 'Senha',
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
-                                onPressed: () => setState(() => ocultarSenha = !ocultarSenha),
-                                icon: Icon(ocultarSenha ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                                onPressed: () => setState(
+                                  () => ocultarSenha = !ocultarSenha,
+                                ),
+                                icon: Icon(
+                                  ocultarSenha
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
                               ),
                             ),
                           ),
@@ -103,11 +135,19 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: () {
                                 Navigator.pushReplacement(
                                   context,
-                                  MaterialPageRoute<void>(builder: (_) => const HomePage()),
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const HomePage(),
+                                  ),
                                 );
                               },
                               icon: const Icon(Icons.login_rounded),
-                              label: const Text('Entrar', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                              label: const Text(
+                                'Entrar',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -115,8 +155,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text('Desenvolvido por MS Line Tecnologia', style: TextStyle(color: Color(0xFF98A2B3), fontSize: 13)),
-                  const Text('Versão 0.2', style: TextStyle(color: Color(0xFFB0B7C3), fontSize: 12)),
+                  const Text(
+                    'Desenvolvido por MS Line Tecnologia',
+                    style: TextStyle(color: Color(0xFF98A2B3), fontSize: 13),
+                  ),
+                  const Text(
+                    'Versão 0.2',
+                    style: TextStyle(color: Color(0xFFB0B7C3), fontSize: 12),
+                  ),
                 ],
               ),
             ),

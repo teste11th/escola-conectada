@@ -1,10 +1,39 @@
 import 'package:flutter/material.dart';
 
+import '../models/posicao_veiculo.dart';
+import '../services/rastreamento_service.dart';
+
 const _azul = Color(0xFF1565C0);
 const _verde = Color(0xFF2E7D32);
 
-class MapaPage extends StatelessWidget {
-  const MapaPage({super.key});
+class MapaPage extends StatefulWidget {
+  const MapaPage({
+    super.key,
+    this.rastreamentoService = const RastreamentoDemoService(),
+  });
+
+  final RastreamentoService rastreamentoService;
+
+  @override
+  State<MapaPage> createState() => _MapaPageState();
+}
+
+class _MapaPageState extends State<MapaPage> {
+  late Future<PosicaoVeiculo> _posicao;
+
+  @override
+  void initState() {
+    super.initState();
+    _atualizarPosicao();
+  }
+
+  void _atualizarPosicao() {
+    _posicao = widget.rastreamentoService.buscarPosicao('onibus-12');
+  }
+
+  void _recarregar() {
+    setState(_atualizarPosicao);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,56 +46,70 @@ class MapaPage extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Centralizar ônibus',
-            onPressed: () {},
+            onPressed: _recarregar,
             icon: const Icon(Icons.my_location_rounded),
           ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-               Positioned.fill(
-                child: Semantics(
-                  label: 'Mapa demonstrativo da rota escolar',
-                  child: CustomPaint(painter: _MapaPainter()),
-                ),
-              ),
-              const Positioned(
-                left: 22,
-                top: 32,
-                child: _Marcador(
-                  icon: Icons.home_rounded,
-                  label: 'Ponto do aluno',
-                  color: Color(0xFF7B61FF),
-                ),
-              ),
-              Positioned(
-                left: constraints.maxWidth * .45,
-                top: constraints.maxHeight * .30,
-                child: const _Marcador(
-                  icon: Icons.directions_bus_rounded,
-                  label: 'Ônibus 12',
-                  color: _azul,
-                  destaque: true,
-                ),
-              ),
-              const Positioned(
-                right: 22,
-                top: 78,
-                child: _Marcador(
-                  icon: Icons.school_rounded,
-                  label: 'EM João XXIII',
-                  color: _verde,
-                ),
-              ),
-              const Positioned(
-                left: 16,
-                right: 16,
-                bottom: 18,
-                child: _ResumoRota(),
-              ),
-            ],
+      body: FutureBuilder<PosicaoVeiculo>(
+        future: _posicao,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return _ErroLocalizacao(onTentarNovamente: _recarregar);
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final posicao = snapshot.requireData;
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: Semantics(
+                      label: 'Mapa demonstrativo da rota escolar',
+                      child: CustomPaint(painter: _MapaPainter()),
+                    ),
+                  ),
+                  const Positioned(
+                    left: 22,
+                    top: 32,
+                    child: _Marcador(
+                      icon: Icons.home_rounded,
+                      label: 'Ponto do aluno',
+                      color: Color(0xFF7B61FF),
+                    ),
+                  ),
+                  Positioned(
+                    left: constraints.maxWidth * .45,
+                    top: constraints.maxHeight * .30,
+                    child: _Marcador(
+                      icon: Icons.directions_bus_rounded,
+                      label: posicao.veiculo,
+                      color: _azul,
+                      destaque: true,
+                    ),
+                  ),
+                  const Positioned(
+                    right: 22,
+                    top: 78,
+                    child: _Marcador(
+                      icon: Icons.school_rounded,
+                      label: 'EM João XXIII',
+                      color: _verde,
+                    ),
+                  ),
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 18,
+                    child: _ResumoRota(posicao: posicao),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -130,7 +173,9 @@ class _Marcador extends StatelessWidget {
 }
 
 class _ResumoRota extends StatelessWidget {
-  const _ResumoRota();
+  const _ResumoRota({required this.posicao});
+
+  final PosicaoVeiculo posicao;
 
   @override
   Widget build(BuildContext context) {
@@ -139,28 +184,28 @@ class _ResumoRota extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: Color(0xFFE3F2FD),
                   child: Icon(Icons.directions_bus_rounded, color: _azul),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ônibus 12',
-                        style: TextStyle(
+                        posicao.veiculo,
+                        style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 17,
                         ),
                       ),
                       Text(
-                        'Linha 05 • Em rota',
-                        style: TextStyle(color: Color(0xFF667085)),
+                        '${posicao.linha} • ${posicao.emRota ? 'Em rota' : 'Parado'}',
+                        style: const TextStyle(color: Color(0xFF667085)),
                       ),
                     ],
                   ),
@@ -169,44 +214,86 @@ class _ResumoRota extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '8 min',
-                      style: TextStyle(
+                      '${posicao.minutosParaChegada} min',
+                      style: const TextStyle(
                         color: _azul,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'previsão',
-                      style: TextStyle(
-                        color: Color(0xFF667085),
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: Color(0xFF667085), fontSize: 11),
                     ),
                   ],
                 ),
               ],
             ),
-            Divider(height: 24),
+            const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _Metrica(
                   icon: Icons.near_me_rounded,
-                  value: '1,2 km',
+                  value:
+                      '${posicao.distanciaKm.toStringAsFixed(1).replaceAll('.', ',')} km',
                   label: 'Distância',
                 ),
                 _Metrica(
                   icon: Icons.speed_rounded,
-                  value: '38 km/h',
+                  value: '${posicao.velocidadeKmH.toStringAsFixed(0)} km/h',
                   label: 'Velocidade',
                 ),
                 _Metrica(
                   icon: Icons.access_time_rounded,
-                  value: '07:18',
+                  value: posicao.horarioChegada,
                   label: 'Chegada',
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Posição atualizada agora',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErroLocalizacao extends StatelessWidget {
+  const _ErroLocalizacao({required this.onTentarNovamente});
+
+  final VoidCallback onTentarNovamente;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 58,
+              color: Color(0xFF667085),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Não foi possível atualizar a localização.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: onTentarNovamente,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tentar novamente'),
             ),
           ],
         ),

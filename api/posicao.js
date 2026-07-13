@@ -30,7 +30,12 @@ export default async function handler(request, response) {
       `/api/veiculos?placa=${encodeURIComponent(placa)}`,
       token,
     );
-    const vehicle = findVehicle(vehiclesPayload?.data, placa);
+    let vehicle = findVehicle(vehiclesPayload?.data, placa);
+
+    if (!vehicle) {
+      const allVehiclesPayload = await rappGet('/api/veiculos', token);
+      vehicle = findVehicle(allVehiclesPayload?.data, placa);
+    }
 
     if (!vehicle?.id) {
       return response.status(404).json({message: 'Veículo não encontrado.'});
@@ -69,8 +74,24 @@ export function normalizePlate(value) {
 }
 
 export function findVehicle(data, plate) {
-  const vehicles = Array.isArray(data) ? data : data ? [data] : [];
+  const vehicles = extractVehicles(data);
   return vehicles.find((vehicle) => normalizePlate(vehicle.placa) === plate) ?? null;
+}
+
+export function extractVehicles(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items;
+  }
+
+  if (Array.isArray(data?.rows)) {
+    return data.rows;
+  }
+
+  return data && typeof data === 'object' && 'id' in data ? [data] : [];
 }
 
 export function parseSpeed(value) {

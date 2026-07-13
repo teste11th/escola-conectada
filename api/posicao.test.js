@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {findVehicle, normalizePlate, parseSpeed} from './posicao.js';
+import {
+  extractVehicles,
+  findVehicle,
+  normalizePlate,
+  parseSpeed,
+} from './posicao.js';
 
 test('normaliza placas antigas e Mercosul', () => {
   assert.equal(normalizePlate('ABC-1234'), 'ABC1234');
@@ -20,6 +25,14 @@ test('localiza veículo pela placa', () => {
 
   assert.equal(vehicle.id, 25);
   assert.equal(vehicle.id_rastreador, 8);
+});
+
+test('aceita listas paginadas de veículos', () => {
+  const items = [{id: 25, placa: 'NJV-4E27'}];
+
+  assert.deepEqual(extractVehicles({items}), items);
+  assert.deepEqual(extractVehicles({rows: items}), items);
+  assert.equal(findVehicle({items}, 'NJV4E27').id, 25);
 });
 
 test('converte velocidade retornada como texto', () => {

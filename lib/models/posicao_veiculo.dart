@@ -10,6 +10,8 @@ class PosicaoVeiculo {
     this.horarioChegada,
     this.pontoAlunoLatitude,
     this.pontoAlunoLongitude,
+    this.escolaLatitude,
+    this.escolaLongitude,
     this.estimativaAproximada = false,
     this.rotaOficial = const [],
     this.trajetoAtePonto = const [],
@@ -28,6 +30,8 @@ class PosicaoVeiculo {
   final String? horarioChegada;
   final double? pontoAlunoLatitude;
   final double? pontoAlunoLongitude;
+  final double? escolaLatitude;
+  final double? escolaLongitude;
   final bool estimativaAproximada;
   final List<PontoRota> rotaOficial;
   final List<PontoRota> trajetoAtePonto;
@@ -37,6 +41,8 @@ class PosicaoVeiculo {
 
   bool get temPontoAluno =>
       pontoAlunoLatitude != null && pontoAlunoLongitude != null;
+
+  bool get temEscola => escolaLatitude != null && escolaLongitude != null;
 
   bool get temRotaOficial => rotaOficial.length >= 2;
 }

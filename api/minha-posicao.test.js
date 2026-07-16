@@ -6,6 +6,7 @@ import {
   enrichPositionForStudent,
   haversineDistanceKm,
   parseRoutePoints,
+  schoolPointForRoute,
 } from './minha-posicao.js';
 
 test('calcula distancia aproximada entre dois pontos', () => {
@@ -54,6 +55,22 @@ test('interpreta rota privada em formato compacto', () => {
     {latitude: -20.2, longitude: -54.2},
   ]);
   assert.deepEqual(parseRoutePoints('invalido'), []);
+});
+
+test('usa o destino da manhã e a origem da tarde como escola', () => {
+  const route = [
+    {latitude: -20.1, longitude: -54.1},
+    {latitude: -20.2, longitude: -54.2},
+  ];
+
+  assert.deepEqual(
+    schoolPointForRoute(route, Date.UTC(2026, 6, 15, 12)),
+    route[1],
+  );
+  assert.deepEqual(
+    schoolPointForRoute(route, Date.UTC(2026, 6, 15, 18)),
+    route[0],
+  );
 });
 
 test('calcula distancia seguindo a rota oficial', () => {

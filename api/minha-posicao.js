@@ -26,8 +26,12 @@ export function enrichPositionForStudent(
   now = Date.now(),
   officialRoute = readOfficialRoute(now),
 ) {
+  const schoolPoint = schoolPointForRoute(officialRoute, now);
+  const positionWithSchool = schoolPoint
+    ? {...position, schoolPoint}
+    : position;
   const studentPoint = normalizePoint(session?.studentPoint);
-  if (!studentPoint) return position;
+  if (!studentPoint) return positionWithSchool;
 
   const routeEstimate = buildOfficialRouteEstimate(
     position,
@@ -37,7 +41,7 @@ export function enrichPositionForStudent(
     now,
   );
   if (routeEstimate) {
-    return {...position, studentPoint, ...routeEstimate};
+    return {...positionWithSchool, studentPoint, ...routeEstimate};
   }
 
   const distanceKm = haversineDistanceKm(
@@ -55,7 +59,7 @@ export function enrichPositionForStudent(
     : Math.max(1, Math.ceil((distanceKm / speedKmH) * 60));
 
   return {
-    ...position,
+    ...positionWithSchool,
     studentPoint,
     distanceKm: Number(distanceKm.toFixed(3)),
     estimatedArrivalMinutes,
@@ -64,6 +68,14 @@ export function enrichPositionForStudent(
     ).toISOString(),
     estimateType: 'straight_line_demo',
   };
+}
+
+export function schoolPointForRoute(routePoints, now = Date.now()) {
+  if (!Array.isArray(routePoints) || routePoints.length < 2) return null;
+  const point = routePeriod(now) === 'morning'
+    ? routePoints[routePoints.length - 1]
+    : routePoints[0];
+  return normalizePoint(point);
 }
 
 export function parseRoutePoints(value) {

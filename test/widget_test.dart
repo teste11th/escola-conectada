@@ -47,6 +47,7 @@ void main() {
 
     expect(find.text('Localização do ônibus'), findsOneWidget);
     expect(find.text('Ônibus 12'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.school_rounded), findsOneWidget);
   });
 }
 

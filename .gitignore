@@ -34,6 +34,8 @@ migrate_working_dir/
 /coverage/
 .env
 .env.local
+.dart-appdata/
+.dart-local/
 .vercel
 
 # Symbolication related

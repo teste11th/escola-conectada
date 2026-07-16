@@ -14,6 +14,7 @@ void main() {
     expect(posicao.velocidadeKmH, greaterThanOrEqualTo(0));
     expect(posicao.emRota, isTrue);
     expect(posicao.temPontoAluno, isTrue);
+    expect(posicao.temEscola, isTrue);
     expect(posicao.distanciaKm, isNotNull);
     expect(posicao.minutosParaChegada, isNotNull);
     expect(posicao.temRotaOficial, isTrue);

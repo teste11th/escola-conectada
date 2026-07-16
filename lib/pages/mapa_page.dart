@@ -78,8 +78,8 @@ class _MapaPageState extends State<MapaPage> {
     if (!_mapaPronto || posicao == null) return;
     final pontoOnibus = LatLng(posicao.latitude, posicao.longitude);
     if (posicao.temPontoAluno) {
-      final enquadramento = posicao.trajetoAtePonto.isNotEmpty
-          ? posicao.trajetoAtePonto
+      final enquadramento = posicao.temRotaOficial
+          ? posicao.rotaOficial
               .map((ponto) => LatLng(ponto.latitude, ponto.longitude))
               .toList()
           : [
@@ -89,6 +89,12 @@ class _MapaPageState extends State<MapaPage> {
                 posicao.pontoAlunoLongitude!,
               ),
             ];
+      enquadramento.add(pontoOnibus);
+      if (posicao.temEscola) {
+        enquadramento.add(
+          LatLng(posicao.escolaLatitude!, posicao.escolaLongitude!),
+        );
+      }
       _mapController.fitCamera(
         CameraFit.coordinates(
           coordinates: enquadramento,
@@ -173,6 +179,9 @@ class _MapaComPosicao extends StatelessWidget {
     final pontoAluno = posicao.temPontoAluno
         ? LatLng(posicao.pontoAlunoLatitude!, posicao.pontoAlunoLongitude!)
         : null;
+    final pontoEscola = posicao.temEscola
+        ? LatLng(posicao.escolaLatitude!, posicao.escolaLongitude!)
+        : null;
     final rotaOficial = posicao.rotaOficial
         .map((ponto) => LatLng(ponto.latitude, ponto.longitude))
         .toList(growable: false);
@@ -254,6 +263,16 @@ class _MapaComPosicao extends StatelessWidget {
                           child: const _MarcadorPontoAluno(),
                         ),
                       ),
+                    if (pontoEscola != null)
+                      Marker(
+                        point: pontoEscola,
+                        width: 64,
+                        height: 64,
+                        child: Semantics(
+                          label: 'Escola vinculada à rota',
+                          child: const _MarcadorEscola(),
+                        ),
+                      ),
                   ],
                 ),
                 if (exibirTiles)
@@ -299,6 +318,33 @@ class _MapaComPosicao extends StatelessWidget {
           child: _ResumoRota(posicao: posicao),
         ),
       ],
+    );
+  }
+}
+
+class _MarcadorEscola extends StatelessWidget {
+  const _MarcadorEscola();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x55000000),
+            blurRadius: 12,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.school_rounded,
+        color: Colors.white,
+        size: 34,
+      ),
     );
   }
 }

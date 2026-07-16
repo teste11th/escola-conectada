@@ -27,6 +27,8 @@ class RastreamentoDemoService implements RastreamentoService {
       horarioChegada: '07:18',
       pontoAlunoLatitude: -20.4667,
       pontoAlunoLongitude: -54.6175,
+      escolaLatitude: -20.4655,
+      escolaLongitude: -54.6160,
       estimativaAproximada: true,
       rotaOficial: const [
         PontoRota(latitude: -20.4697, longitude: -54.6201),
@@ -69,6 +71,7 @@ class RastreamentoApiService implements RastreamentoService {
     final ignicao = json['ignition']?.toString().toUpperCase() == 'ON';
     final placa = json['plate']?.toString() ?? 'Veículo escolar';
     final pontoAluno = json['studentPoint'] as Map?;
+    final pontoEscola = json['schoolPoint'] as Map?;
     final chegada = DateTime.tryParse(
       json['estimatedArrivalAt']?.toString() ?? '',
     );
@@ -86,6 +89,8 @@ class RastreamentoApiService implements RastreamentoService {
       horarioChegada: chegada == null ? null : _formatarHorario(chegada),
       pontoAlunoLatitude: (pontoAluno?['latitude'] as num?)?.toDouble(),
       pontoAlunoLongitude: (pontoAluno?['longitude'] as num?)?.toDouble(),
+      escolaLatitude: (pontoEscola?['latitude'] as num?)?.toDouble(),
+      escolaLongitude: (pontoEscola?['longitude'] as num?)?.toDouble(),
       estimativaAproximada: json['estimateType'] == 'straight_line_demo',
       rotaOficial: rotaOficial,
       trajetoAtePonto: trajetoAtePonto,

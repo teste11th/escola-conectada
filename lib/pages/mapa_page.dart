@@ -78,15 +78,20 @@ class _MapaPageState extends State<MapaPage> {
     if (!_mapaPronto || posicao == null) return;
     final pontoOnibus = LatLng(posicao.latitude, posicao.longitude);
     if (posicao.temPontoAluno) {
+      final enquadramento = posicao.trajetoAtePonto.isNotEmpty
+          ? posicao.trajetoAtePonto
+              .map((ponto) => LatLng(ponto.latitude, ponto.longitude))
+              .toList()
+          : [
+              pontoOnibus,
+              LatLng(
+                posicao.pontoAlunoLatitude!,
+                posicao.pontoAlunoLongitude!,
+              ),
+            ];
       _mapController.fitCamera(
         CameraFit.coordinates(
-          coordinates: [
-            pontoOnibus,
-            LatLng(
-              posicao.pontoAlunoLatitude!,
-              posicao.pontoAlunoLongitude!,
-            ),
-          ],
+          coordinates: enquadramento,
           padding: const EdgeInsets.fromLTRB(70, 90, 70, 300),
           maxZoom: 17,
         ),
@@ -168,6 +173,12 @@ class _MapaComPosicao extends StatelessWidget {
     final pontoAluno = posicao.temPontoAluno
         ? LatLng(posicao.pontoAlunoLatitude!, posicao.pontoAlunoLongitude!)
         : null;
+    final rotaOficial = posicao.rotaOficial
+        .map((ponto) => LatLng(ponto.latitude, ponto.longitude))
+        .toList(growable: false);
+    final trajetoAtePonto = posicao.trajetoAtePonto
+        .map((ponto) => LatLng(ponto.latitude, ponto.longitude))
+        .toList(growable: false);
 
     return Stack(
       children: [
@@ -191,7 +202,27 @@ class _MapaComPosicao extends StatelessWidget {
                     userAgentPackageName: 'br.com.msline.escola_conectada',
                     maxNativeZoom: 19,
                   ),
-                if (pontoAluno != null)
+                if (rotaOficial.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: rotaOficial,
+                        color: const Color(0x661565C0),
+                        strokeWidth: 5,
+                      ),
+                    ],
+                  ),
+                if (trajetoAtePonto.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: trajetoAtePonto,
+                        color: const Color(0xFF2E7D32),
+                        strokeWidth: 6,
+                      ),
+                    ],
+                  )
+                else if (pontoAluno != null && !posicao.temRotaOficial)
                   PolylineLayer(
                     polylines: [
                       Polyline(
@@ -376,18 +407,20 @@ class _ResumoRota extends StatelessWidget {
             ),
             const Divider(height: 24),
             if (posicao.temPontoAluno) ...[
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.person_pin_circle_rounded,
                     color: Color(0xFF2E7D32),
                     size: 18,
                   ),
-                  SizedBox(width: 6),
+                  const SizedBox(width: 6),
                   Text(
-                    'Ponto de embarque vinculado',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    posicao.pontoJaAtendido
+                        ? 'O ônibus já passou pelo ponto'
+                        : 'Ponto de embarque vinculado',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -421,6 +454,13 @@ class _ResumoRota extends StatelessWidget {
               const SizedBox(height: 10),
               const Text(
                 'Estimativa inicial em linha reta. O trajeto da rota será adicionado em uma próxima etapa.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF667085), fontSize: 11),
+              ),
+            ] else if (posicao.temRotaOficial) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Distância calculada pelo trajeto oficial da rota escolar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF667085), fontSize: 11),
               ),

@@ -16,5 +16,7 @@ void main() {
     expect(posicao.temPontoAluno, isTrue);
     expect(posicao.distanciaKm, isNotNull);
     expect(posicao.minutosParaChegada, isNotNull);
+    expect(posicao.temRotaOficial, isTrue);
+    expect(posicao.trajetoAtePonto, isNotEmpty);
   });
 }

@@ -28,6 +28,18 @@ class RastreamentoDemoService implements RastreamentoService {
       pontoAlunoLatitude: -20.4667,
       pontoAlunoLongitude: -54.6175,
       estimativaAproximada: true,
+      rotaOficial: const [
+        PontoRota(latitude: -20.4697, longitude: -54.6201),
+        PontoRota(latitude: -20.4687, longitude: -54.6194),
+        PontoRota(latitude: -20.4676, longitude: -54.6182),
+        PontoRota(latitude: -20.4667, longitude: -54.6175),
+      ],
+      trajetoAtePonto: const [
+        PontoRota(latitude: -20.4697, longitude: -54.6201),
+        PontoRota(latitude: -20.4687, longitude: -54.6194),
+        PontoRota(latitude: -20.4676, longitude: -54.6182),
+        PontoRota(latitude: -20.4667, longitude: -54.6175),
+      ],
       atualizadoEm: DateTime.now(),
       emRota: true,
     );
@@ -60,6 +72,8 @@ class RastreamentoApiService implements RastreamentoService {
     final chegada = DateTime.tryParse(
       json['estimatedArrivalAt']?.toString() ?? '',
     );
+    final rotaOficial = _parseRoute(json['officialRoute']);
+    final trajetoAtePonto = _parseRoute(json['routePath']);
 
     return PosicaoVeiculo(
       veiculo: 'Ônibus $placa',
@@ -73,11 +87,28 @@ class RastreamentoApiService implements RastreamentoService {
       pontoAlunoLatitude: (pontoAluno?['latitude'] as num?)?.toDouble(),
       pontoAlunoLongitude: (pontoAluno?['longitude'] as num?)?.toDouble(),
       estimativaAproximada: json['estimateType'] == 'straight_line_demo',
+      rotaOficial: rotaOficial,
+      trajetoAtePonto: trajetoAtePonto,
+      pontoJaAtendido: json['stopPassed'] == true,
       atualizadoEm:
           DateTime.tryParse(json['eventAt']?.toString() ?? '') ??
           DateTime.now(),
       emRota: ignicao || velocidade > 0,
     );
+  }
+
+  List<PontoRota> _parseRoute(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<List>()
+        .where((point) => point.length >= 2)
+        .map(
+          (point) => PontoRota(
+            latitude: (point[0] as num).toDouble(),
+            longitude: (point[1] as num).toDouble(),
+          ),
+        )
+        .toList(growable: false);
   }
 
   Map<String, dynamic> _decode(String body) {

@@ -25,6 +25,9 @@ class RastreamentoDemoService implements RastreamentoService {
       distanciaKm: 1.2,
       minutosParaChegada: 8,
       horarioChegada: '07:18',
+      pontoAlunoLatitude: -20.4667,
+      pontoAlunoLongitude: -54.6175,
+      estimativaAproximada: true,
       atualizadoEm: DateTime.now(),
       emRota: true,
     );
@@ -53,6 +56,10 @@ class RastreamentoApiService implements RastreamentoService {
     final velocidade = (json['speedKmH'] as num?)?.toDouble() ?? 0;
     final ignicao = json['ignition']?.toString().toUpperCase() == 'ON';
     final placa = json['plate']?.toString() ?? 'Veículo escolar';
+    final pontoAluno = json['studentPoint'] as Map?;
+    final chegada = DateTime.tryParse(
+      json['estimatedArrivalAt']?.toString() ?? '',
+    );
 
     return PosicaoVeiculo(
       veiculo: 'Ônibus $placa',
@@ -60,6 +67,12 @@ class RastreamentoApiService implements RastreamentoService {
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
       velocidadeKmH: velocidade,
+      distanciaKm: (json['distanceKm'] as num?)?.toDouble(),
+      minutosParaChegada: (json['estimatedArrivalMinutes'] as num?)?.toInt(),
+      horarioChegada: chegada == null ? null : _formatarHorario(chegada),
+      pontoAlunoLatitude: (pontoAluno?['latitude'] as num?)?.toDouble(),
+      pontoAlunoLongitude: (pontoAluno?['longitude'] as num?)?.toDouble(),
+      estimativaAproximada: json['estimateType'] == 'straight_line_demo',
       atualizadoEm:
           DateTime.tryParse(json['eventAt']?.toString() ?? '') ??
           DateTime.now(),
@@ -74,6 +87,12 @@ class RastreamentoApiService implements RastreamentoService {
       return const <String, dynamic>{};
     }
   }
+}
+
+String _formatarHorario(DateTime data) {
+  String doisDigitos(int value) => value.toString().padLeft(2, '0');
+  final local = data.toLocal();
+  return '${doisDigitos(local.hour)}:${doisDigitos(local.minute)}';
 }
 
 class RastreamentoException implements Exception {

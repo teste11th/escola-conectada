@@ -8,6 +8,9 @@ class PosicaoVeiculo {
     this.distanciaKm,
     this.minutosParaChegada,
     this.horarioChegada,
+    this.pontoAlunoLatitude,
+    this.pontoAlunoLongitude,
+    this.estimativaAproximada = false,
     required this.atualizadoEm,
     required this.emRota,
   });
@@ -20,6 +23,12 @@ class PosicaoVeiculo {
   final double? distanciaKm;
   final int? minutosParaChegada;
   final String? horarioChegada;
+  final double? pontoAlunoLatitude;
+  final double? pontoAlunoLongitude;
+  final bool estimativaAproximada;
   final DateTime atualizadoEm;
   final bool emRota;
+
+  bool get temPontoAluno =>
+      pontoAlunoLatitude != null && pontoAlunoLongitude != null;
 }

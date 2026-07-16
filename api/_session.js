@@ -17,8 +17,21 @@ export function safeEqual(left, right) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function createSession({cpf, vehiclePlate, secret, now = Date.now()}) {
-  const payload = {sub: cpf, vehiclePlate, exp: Math.floor(now / 1000) + sessionDurationSeconds};
+export function createSession({
+  cpf,
+  vehiclePlate,
+  studentPoint,
+  routeAverageSpeedKmh,
+  secret,
+  now = Date.now(),
+}) {
+  const payload = {
+    sub: cpf,
+    vehiclePlate,
+    ...(studentPoint ? {studentPoint} : {}),
+    ...(routeAverageSpeedKmh ? {routeAverageSpeedKmh} : {}),
+    exp: Math.floor(now / 1000) + sessionDurationSeconds,
+  };
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
   return `${encoded}.${signature}`;

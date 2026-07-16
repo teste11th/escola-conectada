@@ -13,5 +13,8 @@ void main() {
     expect(posicao.longitude, isNot(0));
     expect(posicao.velocidadeKmH, greaterThanOrEqualTo(0));
     expect(posicao.emRota, isTrue);
+    expect(posicao.temPontoAluno, isTrue);
+    expect(posicao.distanciaKm, isNotNull);
+    expect(posicao.minutosParaChegada, isNotNull);
   });
 }

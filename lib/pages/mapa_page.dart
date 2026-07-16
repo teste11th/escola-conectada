@@ -76,7 +76,24 @@ class _MapaPageState extends State<MapaPage> {
   void _centralizar() {
     final posicao = _posicao;
     if (!_mapaPronto || posicao == null) return;
-    _mapController.move(LatLng(posicao.latitude, posicao.longitude), 16);
+    final pontoOnibus = LatLng(posicao.latitude, posicao.longitude);
+    if (posicao.temPontoAluno) {
+      _mapController.fitCamera(
+        CameraFit.coordinates(
+          coordinates: [
+            pontoOnibus,
+            LatLng(
+              posicao.pontoAlunoLatitude!,
+              posicao.pontoAlunoLongitude!,
+            ),
+          ],
+          padding: const EdgeInsets.fromLTRB(70, 90, 70, 300),
+          maxZoom: 17,
+        ),
+      );
+      return;
+    }
+    _mapController.move(pontoOnibus, 16);
   }
 
   @override
@@ -148,6 +165,9 @@ class _MapaComPosicao extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ponto = LatLng(posicao.latitude, posicao.longitude);
+    final pontoAluno = posicao.temPontoAluno
+        ? LatLng(posicao.pontoAlunoLatitude!, posicao.pontoAlunoLongitude!)
+        : null;
 
     return Stack(
       children: [
@@ -171,6 +191,17 @@ class _MapaComPosicao extends StatelessWidget {
                     userAgentPackageName: 'br.com.msline.escola_conectada',
                     maxNativeZoom: 19,
                   ),
+                if (pontoAluno != null)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: [ponto, pontoAluno],
+                        color: const Color(0xFF2E7D32),
+                        strokeWidth: 4,
+                        pattern: StrokePattern.dashed(segments: [10, 8]),
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
                     Marker(
@@ -182,6 +213,16 @@ class _MapaComPosicao extends StatelessWidget {
                         child: const _MarcadorOnibus(),
                       ),
                     ),
+                    if (pontoAluno != null)
+                      Marker(
+                        point: pontoAluno,
+                        width: 64,
+                        height: 64,
+                        child: Semantics(
+                          label: 'Ponto de embarque do aluno',
+                          child: const _MarcadorPontoAluno(),
+                        ),
+                      ),
                   ],
                 ),
                 if (exibirTiles)
@@ -227,6 +268,33 @@ class _MapaComPosicao extends StatelessWidget {
           child: _ResumoRota(posicao: posicao),
         ),
       ],
+    );
+  }
+}
+
+class _MarcadorPontoAluno extends StatelessWidget {
+  const _MarcadorPontoAluno();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E7D32),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x55000000),
+            blurRadius: 12,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.person_pin_circle_rounded,
+        color: Colors.white,
+        size: 34,
+      ),
     );
   }
 }
@@ -307,6 +375,24 @@ class _ResumoRota extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
+            if (posicao.temPontoAluno) ...[
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.person_pin_circle_rounded,
+                    color: Color(0xFF2E7D32),
+                    size: 18,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Ponto de embarque vinculado',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -319,8 +405,10 @@ class _ResumoRota extends StatelessWidget {
                 ),
                 _Metrica(
                   icon: Icons.access_time_rounded,
-                  value: posicao.horarioChegada ?? '--',
-                  label: 'Chegada',
+                  value: posicao.minutosParaChegada == null
+                      ? '--'
+                      : '~${posicao.minutosParaChegada} min',
+                  label: 'Estimativa',
                 ),
                 _Metrica(
                   icon: Icons.update_rounded,
@@ -329,6 +417,14 @@ class _ResumoRota extends StatelessWidget {
                 ),
               ],
             ),
+            if (posicao.estimativaAproximada) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Estimativa inicial em linha reta. O trajeto da rota será adicionado em uma próxima etapa.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF667085), fontSize: 11),
+              ),
+            ],
           ],
         ),
       ),

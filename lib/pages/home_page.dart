@@ -343,19 +343,23 @@ class _StatusCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _Status(
+                      icon: Icons.near_me_rounded,
+                      value: posicao.distanciaKm == null
+                          ? '--'
+                          : '${posicao.distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km',
+                      label: 'Distância',
+                    ),
+                    _Status(
+                      icon: Icons.access_time_rounded,
+                      value: posicao.minutosParaChegada == null
+                          ? '--'
+                          : '~${posicao.minutosParaChegada} min',
+                      label: 'Estimativa',
+                    ),
+                    _Status(
                       icon: Icons.speed,
                       value: '${posicao.velocidadeKmH.toStringAsFixed(0)} km/h',
                       label: 'Velocidade',
-                    ),
-                    const _Status(
-                      icon: Icons.gps_fixed,
-                      value: 'Ativo',
-                      label: 'GPS',
-                    ),
-                    _Status(
-                      icon: Icons.access_time,
-                      value: horario,
-                      label: 'Atualização',
                     ),
                   ],
                 ),

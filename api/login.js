@@ -14,13 +14,40 @@ export default async function handler(request, response) {
     return response.status(401).json({message: 'CPF ou senha inválidos.'});
   }
 
-  const token = createSession({cpf, vehiclePlate: process.env.DEMO_VEHICLE_PLATE, secret: process.env.SESSION_SECRET});
+  const token = createSession({
+    cpf,
+    vehiclePlate: process.env.DEMO_VEHICLE_PLATE,
+    studentPoint: readStudentPoint(),
+    routeAverageSpeedKmh: readAverageSpeed(),
+    secret: process.env.SESSION_SECRET,
+  });
   return response.status(200).json({
     token,
     expiresIn: 28800,
     responsible: {name: 'Responsável demonstrativo'},
     student: {name: 'Pedro Henrique'},
   });
+}
+
+function readStudentPoint() {
+  const latitude = Number(process.env.DEMO_STUDENT_LATITUDE);
+  const longitude = Number(process.env.DEMO_STUDENT_LONGITUDE);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    return null;
+  }
+  return {latitude, longitude};
+}
+
+function readAverageSpeed() {
+  const speed = Number(process.env.DEMO_ROUTE_AVERAGE_SPEED_KMH);
+  return Number.isFinite(speed) && speed > 0 ? speed : 25;
 }
 
 function hasEnvironment() {

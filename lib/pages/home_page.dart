@@ -13,11 +13,13 @@ class HomePage extends StatefulWidget {
     this.rastreamentoService = const RastreamentoDemoService(),
     this.nomeResponsavel = 'Responsável',
     this.nomeAluno = 'Pedro Henrique',
+    this.exibirTilesMapa = true,
   });
 
   final RastreamentoService rastreamentoService;
   final String nomeResponsavel;
   final String nomeAluno;
+  final bool exibirTilesMapa;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -35,7 +37,10 @@ class _HomePageState extends State<HomePage> {
         nomeAluno: widget.nomeAluno,
         rastreamentoService: widget.rastreamentoService,
       ),
-      MapaPage(rastreamentoService: widget.rastreamentoService),
+      MapaPage(
+        rastreamentoService: widget.rastreamentoService,
+        exibirTiles: widget.exibirTilesMapa,
+      ),
       const AvisosPage(),
       const PerfilPage(),
     ];

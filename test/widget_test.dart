@@ -11,6 +11,7 @@ void main() {
         home: LoginPage(
           authService: const _FakeAuthService(),
           rastreamentoServiceFactory: (_) => const RastreamentoDemoService(),
+          exibirTilesMapa: false,
         ),
       ),
     );
@@ -44,8 +45,7 @@ void main() {
     await tester.tap(find.text('Acompanhar ônibus'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ponto do aluno'), findsOneWidget);
-    expect(find.text('EM João XXIII'), findsOneWidget);
+    expect(find.text('Localização do ônibus'), findsOneWidget);
     expect(find.text('Ônibus 12'), findsAtLeastNWidgets(1));
   });
 }

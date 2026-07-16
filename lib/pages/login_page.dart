@@ -9,10 +9,12 @@ class LoginPage extends StatefulWidget {
     super.key,
     this.authService = const AuthApiService(),
     this.rastreamentoServiceFactory,
+    this.exibirTilesMapa = true,
   });
 
   final AuthService authService;
   final RastreamentoService Function(String token)? rastreamentoServiceFactory;
+  final bool exibirTilesMapa;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -62,6 +64,7 @@ class _LoginPageState extends State<LoginPage> {
             rastreamentoService: rastreamento,
             nomeResponsavel: sessao.nomeResponsavel,
             nomeAluno: sessao.nomeAluno,
+            exibirTilesMapa: widget.exibirTilesMapa,
           ),
         ),
       );

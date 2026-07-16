@@ -1,42 +1,88 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../models/posicao_veiculo.dart';
 import '../services/rastreamento_service.dart';
 
 const _azul = Color(0xFF1565C0);
-const _verde = Color(0xFF2E7D32);
+const _intervaloAtualizacao = Duration(seconds: 15);
 
 class MapaPage extends StatefulWidget {
   const MapaPage({
     super.key,
     this.rastreamentoService = const RastreamentoDemoService(),
+    this.exibirTiles = true,
   });
 
   final RastreamentoService rastreamentoService;
+  final bool exibirTiles;
 
   @override
   State<MapaPage> createState() => _MapaPageState();
 }
 
 class _MapaPageState extends State<MapaPage> {
-  late Future<PosicaoVeiculo> _posicao;
+  final MapController _mapController = MapController();
+  Timer? _timer;
+  PosicaoVeiculo? _posicao;
+  Object? _erro;
+  bool _buscando = false;
+  bool _mapaPronto = false;
 
   @override
   void initState() {
     super.initState();
-    _atualizarPosicao();
+    _atualizarPosicao(centralizar: true);
+    _timer = Timer.periodic(_intervaloAtualizacao, (_) => _atualizarPosicao());
   }
 
-  void _atualizarPosicao() {
-    _posicao = widget.rastreamentoService.buscarPosicao('onibus-12');
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _mapController.dispose();
+    super.dispose();
   }
 
-  void _recarregar() {
-    setState(_atualizarPosicao);
+  Future<void> _atualizarPosicao({bool centralizar = false}) async {
+    if (_buscando) return;
+    if (mounted) setState(() => _buscando = true);
+
+    try {
+      final novaPosicao = await widget.rastreamentoService.buscarPosicao(
+        'onibus-escolar',
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _posicao = novaPosicao;
+        _erro = null;
+      });
+
+      if (centralizar || !_mapaPronto) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _centralizar();
+        });
+      }
+    } catch (erro) {
+      if (mounted) setState(() => _erro = erro);
+    } finally {
+      if (mounted) setState(() => _buscando = false);
+    }
+  }
+
+  void _centralizar() {
+    final posicao = _posicao;
+    if (!_mapaPronto || posicao == null) return;
+    _mapController.move(LatLng(posicao.latitude, posicao.longitude), 16);
   }
 
   @override
   Widget build(BuildContext context) {
+    final posicao = _posicao;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -45,129 +91,169 @@ class _MapaPageState extends State<MapaPage> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Atualizar posição',
+            onPressed: _buscando
+                ? null
+                : () => _atualizarPosicao(centralizar: true),
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
             tooltip: 'Centralizar ônibus',
-            onPressed: _recarregar,
+            onPressed: posicao == null ? null : _centralizar,
             icon: const Icon(Icons.my_location_rounded),
           ),
         ],
       ),
-      body: FutureBuilder<PosicaoVeiculo>(
-        future: _posicao,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return _ErroLocalizacao(onTentarNovamente: _recarregar);
-          }
-
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final posicao = snapshot.requireData;
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: Semantics(
-                      label: 'Mapa demonstrativo da rota escolar',
-                      child: CustomPaint(painter: _MapaPainter()),
-                    ),
-                  ),
-                  const Positioned(
-                    left: 22,
-                    top: 32,
-                    child: _Marcador(
-                      icon: Icons.home_rounded,
-                      label: 'Ponto do aluno',
-                      color: Color(0xFF7B61FF),
-                    ),
-                  ),
-                  Positioned(
-                    left: constraints.maxWidth * .45,
-                    top: constraints.maxHeight * .30,
-                    child: _Marcador(
-                      icon: Icons.directions_bus_rounded,
-                      label: posicao.veiculo,
-                      color: _azul,
-                      destaque: true,
-                    ),
-                  ),
-                  const Positioned(
-                    right: 22,
-                    top: 78,
-                    child: _Marcador(
-                      icon: Icons.school_rounded,
-                      label: 'EM João XXIII',
-                      color: _verde,
-                    ),
-                  ),
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    bottom: 18,
-                    child: _ResumoRota(posicao: posicao),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+      body: switch ((posicao, _erro)) {
+        (null, final Object erro) => _ErroLocalizacao(
+          mensagem: erro.toString(),
+          onTentarNovamente: () => _atualizarPosicao(centralizar: true),
+        ),
+        (null, null) => const Center(child: CircularProgressIndicator()),
+        (final PosicaoVeiculo atual, _) => _MapaComPosicao(
+          posicao: atual,
+          mapController: _mapController,
+          atualizando: _buscando,
+          exibirTiles: widget.exibirTiles,
+          avisoAtualizacao: _erro == null
+              ? null
+              : 'Não foi possível obter uma posição mais recente.',
+          onMapReady: () {
+            _mapaPronto = true;
+            _centralizar();
+          },
+        ),
+      },
     );
   }
 }
 
-class _Marcador extends StatelessWidget {
-  const _Marcador({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.destaque = false,
+class _MapaComPosicao extends StatelessWidget {
+  const _MapaComPosicao({
+    required this.posicao,
+    required this.mapController,
+    required this.atualizando,
+    required this.exibirTiles,
+    required this.onMapReady,
+    this.avisoAtualizacao,
   });
 
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool destaque;
+  final PosicaoVeiculo posicao;
+  final MapController mapController;
+  final bool atualizando;
+  final bool exibirTiles;
+  final VoidCallback onMapReady;
+  final String? avisoAtualizacao;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    final ponto = LatLng(posicao.latitude, posicao.longitude);
+
+    return Stack(
       children: [
-        Container(
-          width: destaque ? 58 : 48,
-          height: destaque ? 58 : 48,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 4),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+        Positioned.fill(
+          child: Semantics(
+            label: 'Mapa em tempo real do ônibus escolar',
+            child: FlutterMap(
+              mapController: mapController,
+              options: MapOptions(
+                initialCenter: ponto,
+                initialZoom: 16,
+                minZoom: 4,
+                maxZoom: 19,
+                onMapReady: onMapReady,
               ),
-            ],
+              children: [
+                if (exibirTiles)
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'br.com.msline.escola_conectada',
+                    maxNativeZoom: 19,
+                  ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: ponto,
+                      width: 68,
+                      height: 68,
+                      child: Semantics(
+                        label: '${posicao.veiculo} no mapa',
+                        child: const _MarcadorOnibus(),
+                      ),
+                    ),
+                  ],
+                ),
+                if (exibirTiles)
+                  const SimpleAttributionWidget(
+                    source: Text('OpenStreetMap contributors'),
+                    alignment: Alignment.topRight,
+                  ),
+              ],
+            ),
           ),
-          child: Icon(icon, color: Colors.white, size: destaque ? 30 : 25),
         ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(color: Color(0x1A000000), blurRadius: 6),
-            ],
+        if (atualizando)
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: LinearProgressIndicator(minHeight: 3),
           ),
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        if (avisoAtualizacao != null)
+          Positioned(
+            left: 16,
+            right: 16,
+            top: 12,
+            child: Material(
+              color: const Color(0xFFFFF4E5),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(avisoAtualizacao!)),
+                  ],
+                ),
+              ),
+            ),
           ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 18,
+          child: _ResumoRota(posicao: posicao),
         ),
       ],
+    );
+  }
+}
+
+class _MarcadorOnibus extends StatelessWidget {
+  const _MarcadorOnibus();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _azul,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x55000000),
+            blurRadius: 12,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.directions_bus_rounded,
+        color: Colors.white,
+        size: 34,
+      ),
     );
   }
 }
@@ -204,30 +290,19 @@ class _ResumoRota extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${posicao.linha} • ${posicao.emRota ? 'Em rota' : 'Parado'}',
+                        '${posicao.linha} • ${posicao.emRota ? 'Em movimento' : 'Parado'}',
                         style: const TextStyle(color: Color(0xFF667085)),
                       ),
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      posicao.minutosParaChegada == null
-                          ? '--'
-                          : '${posicao.minutosParaChegada} min',
-                      style: const TextStyle(
-                        color: _azul,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const Text(
-                      'previsão',
-                      style: TextStyle(color: Color(0xFF667085), fontSize: 11),
-                    ),
-                  ],
+                Text(
+                  '${posicao.velocidadeKmH.toStringAsFixed(0)} km/h',
+                  style: const TextStyle(
+                    color: _azul,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                  ),
                 ),
               ],
             ),
@@ -243,66 +318,16 @@ class _ResumoRota extends StatelessWidget {
                   label: 'Distância',
                 ),
                 _Metrica(
-                  icon: Icons.speed_rounded,
-                  value: '${posicao.velocidadeKmH.toStringAsFixed(0)} km/h',
-                  label: 'Velocidade',
-                ),
-                _Metrica(
                   icon: Icons.access_time_rounded,
                   value: posicao.horarioChegada ?? '--',
                   label: 'Chegada',
                 ),
+                _Metrica(
+                  icon: Icons.update_rounded,
+                  value: _formatarHorario(posicao.atualizadoEm),
+                  label: 'Atualização',
+                ),
               ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Posição atualizada em ${_formatarHorario(posicao.atualizadoEm)}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF667085)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _formatarHorario(DateTime data) {
-  String doisDigitos(int value) => value.toString().padLeft(2, '0');
-  final local = data.toLocal();
-  return '${doisDigitos(local.hour)}:${doisDigitos(local.minute)}:${doisDigitos(local.second)}';
-}
-
-class _ErroLocalizacao extends StatelessWidget {
-  const _ErroLocalizacao({required this.onTentarNovamente});
-
-  final VoidCallback onTentarNovamente;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 58,
-              color: Color(0xFF667085),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Não foi possível atualizar a localização.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 14),
-            FilledButton.icon(
-              onPressed: onTentarNovamente,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Tentar novamente'),
             ),
           ],
         ),
@@ -338,68 +363,55 @@ class _Metrica extends StatelessWidget {
   }
 }
 
-class _MapaPainter extends CustomPainter {
-  const _MapaPainter();
+class _ErroLocalizacao extends StatelessWidget {
+  const _ErroLocalizacao({
+    required this.mensagem,
+    required this.onTentarNovamente,
+  });
+
+  final String mensagem;
+  final VoidCallback onTentarNovamente;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFEAF0E8),
-    );
-
-    final quarteirao = Paint()..color = Colors.white;
-    for (var linha = 0; linha < 5; linha++) {
-      for (var coluna = 0; coluna < 4; coluna++) {
-        final esquerda = 18.0 + coluna * (size.width / 4);
-        final topo = 20.0 + linha * 105;
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(esquerda, topo, size.width / 5.2, 62),
-            const Radius.circular(10),
-          ),
-          quarteirao,
-        );
-      }
-    }
-
-    final caminho = Path()
-      ..moveTo(45, 92)
-      ..cubicTo(
-        size.width * .18,
-        185,
-        size.width * .34,
-        112,
-        size.width * .48,
-        238,
-      )
-      ..cubicTo(
-        size.width * .62,
-        355,
-        size.width * .73,
-        170,
-        size.width - 62,
-        132,
-      );
-
-    canvas.drawPath(
-      caminho,
-      Paint()
-        ..color = const Color(0xFFD3DBE4)
-        ..strokeWidth = 18
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke,
-    );
-    canvas.drawPath(
-      caminho,
-      Paint()
-        ..color = _azul
-        ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke,
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 58,
+              color: Color(0xFF667085),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Não foi possível atualizar a localização.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              mensagem,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF667085)),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: onTentarNovamente,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+String _formatarHorario(DateTime data) {
+  String doisDigitos(int value) => value.toString().padLeft(2, '0');
+  final local = data.toLocal();
+  return '${doisDigitos(local.hour)}:${doisDigitos(local.minute)}:${doisDigitos(local.second)}';
 }
